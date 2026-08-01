@@ -1,0 +1,412 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>For InbuKutty</title>
+    <style>
+        :root {
+            --bg-color: #050505;
+            --text-color: #f4f4f4;
+            --accent: #ffb6c1; 
+        }
+
+        body, html {
+            margin: 0; padding: 0; width: 100%; height: 100%;
+            background-color: var(--bg-color); color: var(--text-color);
+            font-family: 'Courier New', Courier, monospace; 
+            overflow: hidden; 
+            -webkit-user-select: none; user-select: none;
+        }
+
+        .hidden { display: none !important; }
+
+        /* 1. Permanent Falling Hearts Background */
+        #matrix-canvas {
+            position: fixed; top: 0; left: 0;
+            z-index: 0; 
+            opacity: 0.8; 
+        }
+
+        /* 2. Particle Intro Screen */
+        #intro-screen {
+            position: fixed; top: 0; left: 0;
+            width: 100vw; height: 100vh; z-index: 100;
+            background: transparent; 
+            display: flex; justify-content: center; align-items: center;
+            transition: opacity 1s ease;
+        }
+        #particle-canvas { position: absolute; z-index: 2; }
+
+        /* 3. Slide/Chapter System */
+        .slide {
+            position: absolute; top: 0; left: 0;
+            width: 100%; height: 100vh;
+            display: flex; flex-direction: column; justify-content: center; align-items: center;
+            opacity: 0; pointer-events: none; 
+            transition: opacity 0.8s ease-in-out;
+            z-index: 10; text-align: center;
+        }
+        .slide.active {
+            opacity: 1; pointer-events: auto; 
+        }
+
+        /* Glassmorphism Section Boxes */
+        .section-box {
+            background: rgba(10, 10, 10, 0.4); 
+            backdrop-filter: blur(6px); 
+            border-radius: 15px;
+            padding: 40px 30px; 
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            box-shadow: 0 10px 30px rgba(0,0,0,0.7);
+            max-width: 600px;
+            width: 90%;
+        }
+
+        .slide-header { color: var(--accent); font-size: 0.8rem; letter-spacing: 2px; text-transform: uppercase; margin-bottom: 10px; }
+        .slide-title { font-size: 2.2rem; font-family: 'Georgia', serif; font-style: italic; font-weight: normal; margin: 0 0 20px 0; }
+        
+        /* Next Button */
+        .next-btn {
+            margin-top: 30px; background: transparent; border: 1px solid var(--accent); 
+            color: var(--accent); padding: 12px 35px; border-radius: 25px;
+            cursor: pointer; transition: 0.3s; font-family: inherit; font-size: 1rem; font-weight: bold;
+        }
+        .next-btn:hover { background: var(--accent); color: #000; }
+
+        /* Counter Styles */
+        .countdown-container { display: flex; justify-content: center; gap: 10px; margin: 20px 0; flex-wrap: wrap; }
+        .time-box { background: rgba(0,0,0,0.6); border: 1px solid rgba(255, 255, 255, 0.2); border-radius: 10px; padding: 15px 10px; min-width: 70px; }
+        .time-box span { font-size: 1.8rem; font-weight: bold; font-family: Arial, sans-serif; }
+        .time-box p { font-size: 0.6rem; letter-spacing: 1px; margin: 5px 0 0 0; color: var(--accent); }
+
+        /* Polaroids */
+        .gallery { display: flex; flex-wrap: wrap; gap: 15px; justify-content: center; }
+        .polaroid { 
+            background: #fff; padding: 8px 8px 25px 8px; 
+            box-shadow: 0 4px 15px rgba(0,0,0,0.8); width: 140px; 
+            transform: rotate(-3deg); transition: transform 0.3s; border-radius: 4px;
+        }
+        .polaroid:nth-child(even) { transform: rotate(4deg); }
+        .polaroid img { width: 100%; height: auto; border-radius: 2px; }
+        .polaroid-caption { color: #333; font-family: 'Georgia', serif; font-size: 0.75rem; font-style: italic; margin-top: 8px; }
+
+        /* Promises */
+        #promise-text { font-family: 'Georgia', serif; font-size: 1.3rem; font-style: italic; min-height: 80px; line-height: 1.5; margin: 20px auto; }
+        .seal-btn { background: transparent; border: 2px solid var(--accent); color: var(--accent); padding: 15px 30px; border-radius: 30px; font-weight: bold; cursor: pointer; transition: 0.3s; margin-top: 10px; outline: none; }
+        .seal-btn.sealed { background: var(--accent); color: #000; border-color: var(--accent); }
+        #seal-progress-bar { width: 200px; height: 4px; background: rgba(255,255,255,0.2); margin: 15px auto; border-radius: 2px; overflow: hidden; }
+        #seal-progress { width: 0%; height: 100%; background: var(--accent); }
+
+        /* Voice Note */
+        .action-btn { background-color: var(--accent); color: #000; border: none; padding: 12px 24px; border-radius: 25px; cursor: pointer; font-size: 1rem; margin: 10px; font-weight: bold; transition: 0.2s; }
+        audio { margin-top: 15px; width: 100%; max-width: 300px; border-radius: 25px; }
+    </style>
+</head>
+<body>
+
+    <!-- 1. PERMANENT FALLING HEARTS BACKGROUND -->
+    <canvas id="matrix-canvas"></canvas>
+
+    <!-- 2. THE INTRO SCREEN -->
+    <div id="intro-screen">
+        <canvas id="particle-canvas"></canvas>
+    </div>
+
+    <!-- CHAPTER 1: DAY COUNTER -->
+    <div class="slide" id="slide-1">
+        <div class="section-box">
+            <p class="slide-header">Chapter One • Us</p>
+            <h2 class="slide-title">I have loved you for</h2>
+            <div class="countdown-container">
+                <div class="time-box"><span id="days">00</span><p>DAYS</p></div>
+                <div class="time-box"><span id="hours">00</span><p>HOURS</p></div>
+                <div class="time-box"><span id="minutes">00</span><p>MINUTES</p></div>
+                <div class="time-box"><span id="seconds">00</span><p>SECONDS</p></div>
+            </div>
+            <p style="font-style: italic; color: #ccc; font-size: 0.9rem;">...and every single second, I would choose again.</p>
+            <button class="next-btn" onclick="goToSlide(2)">Continue</button>
+        </div>
+    </div>
+
+    <!-- CHAPTER 2: MEMORY BOX -->
+    <div class="slide" id="slide-2">
+        <div class="section-box">
+            <p class="slide-header">Chapter Two • Memories</p>
+            <h2 class="slide-title">I opened our memory box...</h2>
+            <div class="gallery">
+                <div class="polaroid"><img src="pic1.jpg" alt="Memory 1"><div class="polaroid-caption">The one I keep coming back to</div></div>
+                <div class="polaroid"><img src="pic2.jpg" alt="Memory 2"><div class="polaroid-caption">Proof that I'm the lucky one</div></div>
+                <div class="polaroid"><img src="pic3.jpg" alt="Memory 3"><div class="polaroid-caption">My favourite view, always</div></div>
+            </div>
+            <button class="next-btn" onclick="goToSlide(3)">Continue</button>
+        </div>
+    </div>
+
+    <!-- CHAPTER 3: PROMISES -->
+    <div class="slide" id="slide-3">
+        <div class="section-box">
+            <p class="slide-header">Chapter Three • Promises</p>
+            <p class="slide-header" style="color: #fff;" id="promise-indicator">PROMISE <span id="promise-current">1</span> OF 3</p>
+            <p id="promise-text">I promise to choose you — on the easy days, and twice on the hard ones.</p>
+            
+            <button id="seal-btn" class="seal-btn">PRESS & HOLD TO SEAL</button>
+            <div id="seal-progress-bar"><div id="seal-progress"></div></div>
+            <p style="font-size: 0.8rem; color: #888;" id="promise-hint">press & hold your thumb to seal this promise</p>
+            
+            <button class="next-btn hidden" id="to-voice-btn" onclick="goToSlide(4)">Continue</button>
+        </div>
+    </div>
+
+    <!-- CHAPTER 4: VOICE NOTE -->
+    <div class="slide" id="slide-4">
+        <div class="section-box">
+            <p class="slide-header">Chapter Four • For InbuKutty</p>
+            <h2 class="slide-title">A voice note, only for you</h2>
+            <p>Leave a message here, InbuKutty. Send it straight to my WhatsApp!</p>
+            
+            <button id="record-btn" class="action-btn">🎤 Start Recording</button>
+            <audio id="audio-playback" controls class="hidden"></audio>
+            <br>
+            <button id="send-btn" class="action-btn hidden" style="background-color: #25D366; color: #fff;">💬 Send via WhatsApp</button>
+            <p id="status-message"></p>
+        </div>
+    </div>
+
+    <script>
+        // ==========================================
+        // 1. FALLING HEARTS BACKGROUND
+        // ==========================================
+        const mCanvas = document.getElementById('matrix-canvas');
+        const mCtx = mCanvas.getContext('2d');
+        mCanvas.width = window.innerWidth; mCanvas.height = window.innerHeight;
+        
+        const hearts = "♥❤";
+        const fontSize = 20; 
+        const columns = mCanvas.width / fontSize;
+        const drops = Array.from({length: columns}).fill(1);
+
+        function drawMatrix() {
+            mCtx.fillStyle = "rgba(0, 0, 0, 0.1)"; 
+            mCtx.fillRect(0, 0, mCanvas.width, mCanvas.height);
+            mCtx.fillStyle = "#ff4da6"; 
+            mCtx.font = fontSize + "px Arial";
+            for (let i = 0; i < drops.length; i++) {
+                const text = hearts.charAt(Math.floor(Math.random() * hearts.length));
+                mCtx.fillText(text, i * fontSize, drops[i] * fontSize);
+                if (drops[i] * fontSize > mCanvas.height && Math.random() > 0.975) drops[i] = 0;
+                drops[i]++;
+            }
+        }
+        setInterval(drawMatrix, 50);
+        window.addEventListener('resize', () => { mCanvas.width = window.innerWidth; mCanvas.height = window.innerHeight; });
+
+        // ==========================================
+        // 2. SLIDE NAVIGATION LOGIC
+        // ==========================================
+        function goToSlide(slideNumber) {
+            document.querySelectorAll('.slide').forEach(slide => {
+                slide.classList.remove('active');
+            });
+            document.getElementById(`slide-${slideNumber}`).classList.add('active');
+        }
+
+        // ==========================================
+        // 3. GLOWING PARTICLE TEXT
+        // ==========================================
+        const pCanvas = document.getElementById('particle-canvas');
+        const pCtx = pCanvas.getContext('2d', { willReadFrequently: true });
+        pCanvas.width = window.innerWidth; pCanvas.height = window.innerHeight;
+
+        let particles = [];
+        const sequence = ['3', '2', '1', 'You', 'Are', 'My', 'Love', '❤', 'Happy', "Girlfriend's", 'Day', 'To The Girl', 'Who Stole', 'My Heart', '❤'];
+        let wordIndex = 0;
+
+        class Particle {
+            constructor(x, y) {
+                this.x = Math.random() * pCanvas.width; this.y = Math.random() * pCanvas.height;
+                this.targetX = x; this.targetY = y; this.size = 2.5;
+            }
+            update() { this.x += (this.targetX - this.x) * 0.1; this.y += (this.targetY - this.y) * 0.1; }
+            draw() {
+                pCtx.fillStyle = '#ffffff'; pCtx.shadowBlur = 10; pCtx.shadowColor = '#fff'; 
+                pCtx.beginPath(); pCtx.arc(this.x, this.y, this.size, 0, Math.PI * 2); pCtx.fill();
+            }
+        }
+
+        function createParticlesForText(text) {
+            particles = []; pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+            pCtx.fillStyle = 'white'; pCtx.font = 'bold 80px Arial';
+            pCtx.textAlign = 'center'; pCtx.textBaseline = 'middle';
+            pCtx.fillText(text, pCanvas.width / 2, pCanvas.height / 2);
+
+            const textData = pCtx.getImageData(0, 0, pCanvas.width, pCanvas.height).data;
+            pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+
+            for (let y = 0; y < pCanvas.height; y += 4) {
+                for (let x = 0; x < pCanvas.width; x += 4) {
+                    if (textData[(y * pCanvas.width + x) * 4 + 3] > 128) particles.push(new Particle(x, y));
+                }
+            }
+        }
+
+        function animateParticles() {
+            pCtx.clearRect(0, 0, pCanvas.width, pCanvas.height);
+            particles.forEach(p => { p.update(); p.draw(); });
+            requestAnimationFrame(animateParticles);
+        }
+
+        function nextWord() {
+            if (wordIndex < sequence.length) {
+                createParticlesForText(sequence[wordIndex]);
+                wordIndex++; setTimeout(nextWord, 1200); 
+            } else {
+                const introScreen = document.getElementById('intro-screen');
+                introScreen.style.opacity = "0";
+                setTimeout(() => {
+                    introScreen.style.display = 'none'; 
+                    goToSlide(1); 
+                }, 1000);
+            }
+        }
+        createParticlesForText(sequence[0]); wordIndex++;
+        animateParticles(); setTimeout(nextWord, 1200);
+
+        // ==========================================
+        // 4. LIVE DAY COUNTER
+        // ==========================================
+        const startDate = new Date("2019-12-01T00:00:00").getTime(); 
+        function updateCounter() {
+            const now = new Date().getTime(); const difference = now - startDate;
+            document.getElementById("days").innerText = Math.floor(difference / (1000 * 60 * 60 * 24));
+            document.getElementById("hours").innerText = Math.floor((difference % (1000 * 60 * 60 * 24)) / (1000 * 60 * 60)).toString().padStart(2, '0');
+            document.getElementById("minutes").innerText = Math.floor((difference % (1000 * 60 * 60)) / (1000 * 60)).toString().padStart(2, '0');
+            document.getElementById("seconds").innerText = Math.floor((difference % (1000 * 60)) / 1000).toString().padStart(2, '0');
+        }
+        setInterval(updateCounter, 1000); updateCounter();
+
+        // ==========================================
+        // 5. PROMISE CEREMONY LOGIC
+        // ==========================================
+        const promises = [
+            "I promise to choose you — on the easy days, and twice on the hard ones.",
+            "I promise to keep falling for you, InbuKutty — on purpose, every day.",
+            "I promise to hold your hand through every chapter of our lives."
+        ];
+        
+        let currentPromiseIndex = 0;
+        let progressInterval;
+        let progress = 0;
+        let isSealed = false;
+
+        const sealBtn = document.getElementById("seal-btn");
+        const sealProgress = document.getElementById("seal-progress");
+        const promiseText = document.getElementById("promise-text");
+        const promiseCurrent = document.getElementById("promise-current");
+
+        function startSeal(e) {
+            if(isSealed || currentPromiseIndex >= promises.length) return;
+            if (e.type === 'touchstart') e.preventDefault(); 
+            
+            progress = 0; sealProgress.style.width = '0%';
+            progressInterval = setInterval(() => {
+                progress += 5; 
+                sealProgress.style.width = progress + '%';
+                if(progress >= 100) completeSeal();
+            }, 100);
+        }
+
+        function stopSeal() {
+            if(isSealed) return;
+            clearInterval(progressInterval);
+            progress = 0; sealProgress.style.width = '0%';
+        }
+
+        function completeSeal() {
+            clearInterval(progressInterval); isSealed = true;
+            sealBtn.innerText = "SEALED ❤️"; sealBtn.classList.add("sealed");
+            
+            setTimeout(() => {
+                currentPromiseIndex++;
+                if(currentPromiseIndex < promises.length) {
+                    promiseText.style.opacity = 0;
+                    setTimeout(() => {
+                        promiseText.innerText = promises[currentPromiseIndex];
+                        promiseCurrent.innerText = currentPromiseIndex + 1;
+                        promiseText.style.opacity = 1; resetSeal();
+                    }, 400);
+                } else {
+                    promiseText.innerText = "Three promises, sealed with your touch. Come see our someday.";
+                    sealBtn.classList.add("hidden");
+                    document.getElementById("seal-progress-bar").classList.add("hidden");
+                    document.getElementById("promise-indicator").classList.add("hidden");
+                    document.getElementById("promise-hint").classList.add("hidden");
+                    document.getElementById("to-voice-btn").classList.remove("hidden");
+                }
+            }, 1200);
+        }
+
+        function resetSeal() {
+            isSealed = false; progress = 0; sealProgress.style.width = '0%';
+            sealBtn.innerText = "PRESS & HOLD TO SEAL"; sealBtn.classList.remove("sealed");
+        }
+
+        sealBtn.addEventListener('mousedown', startSeal); sealBtn.addEventListener('mouseup', stopSeal);
+        sealBtn.addEventListener('mouseleave', stopSeal); sealBtn.addEventListener('touchstart', startSeal, {passive: false});
+        sealBtn.addEventListener('touchend', stopSeal); sealBtn.addEventListener('touchcancel', stopSeal);
+
+        // ==========================================
+        // 6. WHATSAPP VOICE NOTE SENDER
+        // ==========================================
+        let mediaRecorder, audioChunks = [], audioBlob;
+        const recordBtn = document.getElementById("record-btn");
+        const sendBtn = document.getElementById("send-btn");
+        const audioPlayback = document.getElementById("audio-playback");
+        const statusMessage = document.getElementById("status-message");
+
+        recordBtn.addEventListener("click", async () => {
+            if (recordBtn.innerText === "🎤 Start Recording") {
+                try {
+                    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+                    mediaRecorder = new MediaRecorder(stream);
+                    mediaRecorder.ondataavailable = e => audioChunks.push(e.data);
+                    mediaRecorder.onstop = () => {
+                        audioBlob = new Blob(audioChunks, { type: 'audio/webm' });
+                        audioPlayback.src = URL.createObjectURL(audioBlob);
+                        audioPlayback.classList.remove("hidden");
+                        sendBtn.classList.remove("hidden");
+                        audioChunks = [];
+                    };
+                    mediaRecorder.start();
+                    recordBtn.innerText = "🛑 Stop Recording";
+                    recordBtn.style.backgroundColor = "#ff4d4d";
+                    recordBtn.style.color = "#fff";
+                    statusMessage.innerText = "Recording in progress...";
+                } catch (err) {
+                    statusMessage.innerText = "Microphone access denied. Please allow microphone permissions.";
+                }
+            } else {
+                mediaRecorder.stop();
+                recordBtn.innerText = "🎤 Start Recording";
+                recordBtn.style.backgroundColor = "var(--accent)";
+                recordBtn.style.color = "#000";
+                statusMessage.innerText = "Recording finished! Click to send via WhatsApp.";
+            }
+        });
+
+        sendBtn.addEventListener("click", () => {
+            if (!audioBlob) return;
+            
+            const audioUrl = URL.createObjectURL(audioBlob);
+            const myPhoneNumber = "919042961506"; // Your number with India country code
+            
+            const text = encodeURIComponent("Here is my voice note for you ❤️ (Play or download recording here: " + audioUrl + ")");
+            
+            window.open(`https://wa.me/${myPhoneNumber}?text=${text}`, '_blank');
+            
+            statusMessage.innerText = "✅ WhatsApp opened! Send your message.";
+            statusMessage.style.color = "#4CAF50";
+        });
+    </script>
+</body>
+</html>
